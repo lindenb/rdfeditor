@@ -215,5 +215,9 @@ public class ResourcesInRangeTableModel
 	public Model getRDFSchema() {
 		return this.schemaAndModel.getRDFSchema();
 		}
-	
+	@Override
+	public void fireModelChanged() {
+		this.schemaAndModel.fireModelChanged();
+		}
+
 	}

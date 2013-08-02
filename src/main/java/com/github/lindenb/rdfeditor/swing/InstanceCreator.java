@@ -27,6 +27,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.table.TableColumn;
 
@@ -136,7 +137,8 @@ public class InstanceCreator
 			TableColumn tc=t.getColumnModel().getColumn(i);
 			if(i==0) tc.setCellEditor(new PropertyChooserCellEditor(getRDFSchema(),rdfType));
 			if(i==1) tc.setCellEditor(new ObjectChooserCellEditor(0,schemaAndModel,rdfType));
-			tc.setCellRenderer(new RDFTableCellRenderer(getRDFSchema()));
+			tc.setCellRenderer(new RDFTableCellRenderer(getRDFSchema(),
+					i==0?RDFTableCellRenderer.PREFIX_ARROW_LEFT:RDFTableCellRenderer.PREFIX_ARROW_RIGHT));
 			}
 		JScrollPane scroll=new JScrollPane(t);
 		top.add(scroll,BorderLayout.CENTER);
@@ -347,6 +349,11 @@ public class InstanceCreator
 		return this.schemaAndModel.getRDFSchema();
 		}
 	
+	@Override
+	public void fireModelChanged() {
+		this.schemaAndModel.fireModelChanged();
+		}
+	
 	public static InstanceCreator create(
 			Component owner,
 			SchemaAndModel schemaAndModel,
@@ -363,18 +370,22 @@ public class InstanceCreator
 			defaultUri=String.format("urn:%s:%05d",localName,++i);
 			} while(schemaAndModel.getRDFDataStore().containsResource(ResourceFactory.createResource(defaultUri)));
 		Resource subject=null;
+		JTextField tf=new JTextField(defaultUri,50);
 		for(;;)
 			{
-			String s=JOptionPane.showInputDialog(
+			if(JOptionPane.showConfirmDialog(
 					owner,
+					tf,
 					"Enter a valid URI",
-					JOptionPane.QUESTION_MESSAGE
-					);
-			if(s==null || s.trim().isEmpty()) return null;
-			defaultUri=s;
+					JOptionPane.OK_CANCEL_OPTION,
+					JOptionPane.QUESTION_MESSAGE,
+					null
+					)!=JOptionPane.OK_OPTION) return null;
+			if(tf.getText().trim().isEmpty()) return null;
+			defaultUri=tf.getText();
 			URI uri=null;
 			try {
-				uri=new URI(s.trim());
+				uri=new URI(tf.getText().trim());
 				if(!uri.isAbsolute())
 					{
 					JOptionPane.showMessageDialog(owner, "uri :" +uri+" is not absolute");
@@ -385,12 +396,12 @@ public class InstanceCreator
 					JOptionPane.showMessageDialog(owner, "uri :" +uri+" is not opaque");
 					continue;
 					}
-				if(schemaAndModel.getRDFDataStore().containsResource(ResourceFactory.createResource(s)))
+				if(schemaAndModel.getRDFDataStore().containsResource(ResourceFactory.createResource(tf.getText())))
 					{
-					JOptionPane.showMessageDialog(owner, "model already contains that URI:"+s);
+					JOptionPane.showMessageDialog(owner, "model already contains that URI:"+tf.getText());
 					continue;
 					}
-				subject=ResourceFactory.createResource(s);
+				subject=ResourceFactory.createResource(tf.getText());
 				break;
 				}
 			catch (Exception e)

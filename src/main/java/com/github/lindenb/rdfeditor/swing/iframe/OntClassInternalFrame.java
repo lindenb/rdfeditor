@@ -2,6 +2,7 @@ package com.github.lindenb.rdfeditor.swing.iframe;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -9,8 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JInternalFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -41,15 +46,8 @@ public class OntClassInternalFrame
 		super(owner);
 		this.setTitle("Classes");
 		
-		List<Resource> L=new ArrayList<Resource>();
-		ResIterator iter=getRDFSchema().listResourcesWithProperty(RDF.type,RDFS.Class);
-		while(iter.hasNext())
-			{
-			L.add(iter.nextResource());
-			}
-		iter.close();
 		
-		this.instanceListTableModel = new AbstractGenericTableModel<Resource>(L)
+		this.instanceListTableModel = new AbstractGenericTableModel<Resource>()
 			{
 			@Override
 			public Class<?> getColumnClass(int col)
@@ -110,8 +108,12 @@ public class OntClassInternalFrame
 		
 		
 		this.instanceTable=new JTable(this.instanceListTableModel);
+		this.instanceTable.setFont(new Font(Font.DIALOG,Font.PLAIN,24));
+		this.instanceTable.setShowVerticalLines(false);
+		this.instanceTable.setRowHeight(this.instanceTable.getFont().getSize()+5);
 		JScrollPane scroll=new JScrollPane(this.instanceTable);
 		JPanel pane=new JPanel(new BorderLayout(5,5));
+		pane.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 		pane.add(scroll,BorderLayout.CENTER);
 		setContentPane(pane);
 		
@@ -169,9 +171,16 @@ public class OntClassInternalFrame
 				}
 			});
 		
+		pane.add(new JLabel("The rdfs:Class defined in the schema"),BorderLayout.NORTH);
 		
+		JMenuBar bar=new JMenuBar();
+		setJMenuBar(bar);
+		JMenu menu=new JMenu("Classes");
+		bar.add(menu);
+		menu.add(getActionMap().get("view.instances"));
+		menu.add(getActionMap().get("create.instance"));
 		
-
+		reloadModel();
 		}
 	
 	private void createInstanceDialog()
@@ -193,7 +202,7 @@ public class OntClassInternalFrame
 		Resource ontClass= instanceListTableModel.getElementAt(row);
 		if(ontClass==null)
 			{
-			System.err.println("Uhhh???");
+			LOG.error("Uhhh???");
 			return;
 			}
 		for(JInternalFrame f:getDesktopPane().getAllFrames())
@@ -210,6 +219,20 @@ public class OntClassInternalFrame
 				);
 		this.getDesktopPane().add(f);
 		f.setVisible(true);
+		}
+	
+	@Override
+	public void reloadModel()
+		{
+		List<Resource> L=new ArrayList<Resource>();
+		ResIterator iter=getRDFSchema().listResourcesWithProperty(RDF.type,RDFS.Class);
+		while(iter.hasNext())
+			{
+			L.add(iter.nextResource());
+			}
+		iter.close();
+		this.instanceListTableModel.setRows(L);
+		super.reloadModel();
 		}
 	
 	}

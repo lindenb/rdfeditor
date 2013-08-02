@@ -4,6 +4,8 @@ import javax.swing.JInternalFrame;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
 
+import org.apache.log4j.Logger;
+
 import com.github.lindenb.rdfeditor.RDFEditorFrame;
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
 import com.hp.hpl.jena.rdf.model.Model;
@@ -13,6 +15,8 @@ public class AbstractInternalFrame
 	extends JInternalFrame
 	implements SchemaAndModel
 	{
+	protected static final Logger LOG = Logger.getLogger("com.github.lindenb");
+
 	private static final long serialVersionUID = 1L;
 	
 	private RDFEditorFrame ownerFrame;
@@ -67,9 +71,9 @@ public class AbstractInternalFrame
 		{
 		
 		}
-	
+	@Override
 	public void fireModelChanged()
 		{
-		
+		getRDFEditorFrame().fireModelChanged();
 		}		
 	}

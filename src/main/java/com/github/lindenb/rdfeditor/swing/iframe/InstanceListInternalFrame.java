@@ -132,6 +132,7 @@ public class InstanceListInternalFrame
 		}
 
 	
+	
 	public Resource getOntClass()
 		{
 		return ontClass;

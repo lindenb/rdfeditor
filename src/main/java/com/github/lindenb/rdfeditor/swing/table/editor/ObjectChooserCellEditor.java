@@ -240,17 +240,15 @@ public class ObjectChooserCellEditor
 					@Override
 					public boolean accept(Statement stmt)
 						{
-						System.err.println("searching "+stmt);
 						if(!stmt.getObject().isResource()) return false;
 						if(stmt.getObject().asResource().isAnon()) return false;
-						System.err.println("ok? "+stmt);
 						return true;
 						}
 					});
 				while(iter.hasNext())
 					{
 					Statement stmt=iter.next();
-					System.err.println(stmt);
+					
 					RDFDatatype datatType=tm.getTypeByName(stmt.getObject().asResource().getURI());
 					if(datatType!=null)
 						{
@@ -297,6 +295,10 @@ public class ObjectChooserCellEditor
 	}
 
 	
+	@Override
+	public void fireModelChanged() {
+		this.schemaAndModel.fireModelChanged();
+		}
 	
 	@Override
 	public Model getRDFDataStore() {

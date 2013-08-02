@@ -13,20 +13,27 @@ import java.io.IOException;
 
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
+import javax.swing.BorderFactory;
 import javax.swing.JDesktopPane;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JInternalFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
+import javax.swing.JTextField;
+import javax.swing.JToolBar;
 import javax.swing.SwingUtilities;
 
+import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.spi.LoggingEvent;
 
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
+import com.github.lindenb.rdfeditor.swing.iframe.AbstractInternalFrame;
 import com.github.lindenb.rdfeditor.swing.iframe.OntClassInternalFrame;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -39,13 +46,39 @@ public class RDFEditorFrame
 	extends JFrame
 	implements SchemaAndModel
 	{
-	private static Logger LOG = Logger.getLogger("com.github.lindenb");
+	private static final Logger LOG = Logger.getLogger("com.github.lindenb");
 	private Model schema;
 	private Model model;
 	private JDesktopPane desktopPane;
 	private File saveAsFile;
 	private boolean rdfStoreDirtyFlag=false;
 	private ActionMap actionMap=new ActionMap();
+	private SwingAppender swingAppender=null;
+	private JTextField logField=null;
+	
+	private class SwingAppender
+		extends AppenderSkeleton
+		{
+		
+		@Override
+		protected void append(LoggingEvent evt)
+			{
+			if(evt==null || evt.getRenderedMessage()==null) return;
+			logField.setText(evt.getRenderedMessage());
+			logField.setCaretPosition(0);
+			}
+		@Override
+		public void close() {
+			
+			}
+		
+		@Override
+		public boolean requiresLayout() {
+			return false;
+			}
+		}
+	
+	
 	
 	private RDFEditorFrame(File saveAsF,final Model model,final Model schema)
 		{
@@ -67,7 +100,7 @@ public class RDFEditorFrame
 			{
 			@Override
 			public void windowOpened(WindowEvent arg0) {
-				LOG.info("creating OntClassInternalFrame");
+				LOG.info("Creating OntClassInternalFrame");
 				OntClassInternalFrame f=new OntClassInternalFrame(RDFEditorFrame.this);
 				desktopPane.add(f);
 				f.setVisible(true);
@@ -108,9 +141,22 @@ public class RDFEditorFrame
 		menu.add(this.actionMap.get("file.quit"));
 		
 		JPanel mainPane=new JPanel(new BorderLayout(5,5));
+		mainPane.setBorder(BorderFactory.createEmptyBorder(5,5,5,5));
+		
 		setContentPane(mainPane);
 		this.desktopPane=new JDesktopPane();
 		mainPane.add(this.desktopPane,BorderLayout.CENTER);
+		
+		JToolBar toolBar=new JToolBar();
+		mainPane.add(toolBar,BorderLayout.NORTH);
+		toolBar.add(this.actionMap.get("file.saveas"));
+		toolBar.add(this.actionMap.get("file.save"));
+		
+		this.logField=new JTextField(100);
+		this.logField.setEditable(false);
+		mainPane.add(logField,BorderLayout.SOUTH);
+		
+		this.swingAppender=new SwingAppender();
 		}
 	
 	
@@ -166,6 +212,8 @@ public class RDFEditorFrame
 			}
 		this.setVisible(false);
 		this.dispose();
+		if(swingAppender!=null) LOG.removeAppender(swingAppender);
+		swingAppender=null;
 		}
 	
 	
@@ -181,13 +229,24 @@ public class RDFEditorFrame
 		{
 		return this.schema;
 		}
-
+	
+	@Override
+	/** tell the internal frames the model has changed, set the dirty flag to ON */
+	public void fireModelChanged()
+		{
+		LOG.debug("fireModelChanged");
+		for(JInternalFrame jif:this.desktopPane.getAllFrames())
+			{
+			if(!(jif instanceof AbstractInternalFrame)) continue;
+			AbstractInternalFrame.class.cast(jif).reloadModel();
+			}
+		this.rdfStoreDirtyFlag=true;
+		}
 	
 	public static void main(String[] args)
 		throws Exception
 		{
 		LOG.setLevel(Level.INFO);
-		
 		
 		args=new String[]{"-s",
 				"file:///home/lindenb/src/yardfapp/schema.rdf",
@@ -256,6 +315,7 @@ public class RDFEditorFrame
 		
 		
 		final RDFEditorFrame frame=new RDFEditorFrame(rdfStoreFile,model,schema);
+	
 		Dimension screen=Toolkit.getDefaultToolkit().getScreenSize();
 		frame.setBounds(50,50,screen.width-100,screen.height-100);
 		try

@@ -61,7 +61,7 @@ public class InstanceViewInternalFrame extends AbstractInternalFrame
 		left.setBorder(BorderFactory.createTitledBorder("Object Properties"));
 		this.inDomainTableModel=new InDomainTableModel();
 		this.inDomainTable=new JTable(inDomainTableModel);
-		this.inDomainTable.setDefaultRenderer(Object.class, new RDFTableCellRenderer(getRDFSchema()));
+		this.inDomainTable.setDefaultRenderer(Object.class, new RDFTableCellRenderer(getRDFSchema(),RDFTableCellRenderer.PREFIX_ARROW_RIGHT));
 		left.add(new JScrollPane(this.inDomainTable));
 
 		this.inDomainTable.addMouseListener(new MouseAdapter()
@@ -82,7 +82,7 @@ public class InstanceViewInternalFrame extends AbstractInternalFrame
 		right.setBorder(BorderFactory.createTitledBorder("What's link here."));
 		this.resourcesInRangeTableModel=new ResourcesInRangeTableModel(getRDFEditorFrame(),subject);
 		this.resourcesInRangeTable=new JTable(resourcesInRangeTableModel);
-		this.resourcesInRangeTable.setDefaultRenderer(Object.class, new RDFTableCellRenderer(getRDFSchema()));
+		this.resourcesInRangeTable.setDefaultRenderer(Object.class, new RDFTableCellRenderer(getRDFSchema(),RDFTableCellRenderer.PREFIX_ARROW_LEFT));
 
 		this.resourcesInRangeTable.addMouseListener(new MouseAdapter()
 			{

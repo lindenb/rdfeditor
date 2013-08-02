@@ -58,7 +58,7 @@ public class InstanceListTableModel
 				Resource r=iter.next();
 				this.columns.add(ResourceFactory.createProperty(r.getURI()));
 				}
-			if(this.columns.isEmpty()) System.err.println("No column foud for "+ontClass);
+			if(this.columns.isEmpty()) LOG.warn("No column found for "+ontClass);
 			}
 		finally
 			{
@@ -154,6 +154,10 @@ public class InstanceListTableModel
 			if(iter!=null) iter.close();
 			}
 		}
+	
+	
+	
+	
 	@Override
 	public Model getRDFDataStore() {
 		return this.schemaAndModel.getRDFDataStore();
@@ -162,5 +166,9 @@ public class InstanceListTableModel
 	public Model getRDFSchema() {
 		return this.schemaAndModel.getRDFSchema();
 	}
-	
+	@Override
+	public void fireModelChanged() {
+		this.schemaAndModel.fireModelChanged();
+		}
+
 	}

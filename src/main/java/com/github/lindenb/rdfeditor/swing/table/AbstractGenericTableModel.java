@@ -5,10 +5,13 @@ import java.util.Vector;
 
 import javax.swing.table.AbstractTableModel;
 
+import org.apache.log4j.Logger;
+
 
 @SuppressWarnings("serial")
 public abstract class AbstractGenericTableModel<T> extends AbstractTableModel
 	{
+	protected static final Logger LOG = Logger.getLogger("com.github.lindenb");
 	private List<T> rows=new Vector<T>();
 	
 	public AbstractGenericTableModel()
@@ -39,7 +42,6 @@ public abstract class AbstractGenericTableModel<T> extends AbstractTableModel
 	
 	public void setElementAt(int row,T o)
 		{
-		System.err.println("set element at "+row+" "+o);
 		this.rows.set(row, o);
 		this.fireTableRowsUpdated(row, row);
 		}
