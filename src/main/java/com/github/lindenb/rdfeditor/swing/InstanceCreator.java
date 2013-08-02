@@ -10,12 +10,14 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Vector;
+import java.util.regex.Pattern;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
@@ -31,6 +33,9 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.table.TableColumn;
 
+import org.apache.log4j.Logger;
+
+import com.github.lindenb.rdfeditor.rdf.JenaUtils;
 import com.github.lindenb.rdfeditor.rdf.PropertyAndObject;
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
 import com.github.lindenb.rdfeditor.swing.table.InDomainTableModel;
@@ -50,12 +55,15 @@ import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.vocabulary.OWL;
 import com.hp.hpl.jena.vocabulary.RDF;
 import com.hp.hpl.jena.vocabulary.RDFS;
+import com.hp.hpl.jena.vocabulary.XSD;
 
 @SuppressWarnings(value={"serial","rawtypes","unchecked"})
 public class InstanceCreator
 	extends JDialog
 	implements SchemaAndModel
 	{
+	private static final Logger LOG = Logger.getLogger("com.github.lindenb");
+
 	private SchemaAndModel schemaAndModel;
 	private Resource subject;
 	private Resource ontClass;
@@ -315,7 +323,85 @@ public class InstanceCreator
 							continue;
 							}
 						}
-					
+					else if(stmt.getPredicate().getURI().equals(XSD.getURI()+"minExclusive") && 
+							JenaUtils.convertToBigDecimal(stmt.getObject())!=null
+							)
+						{
+						BigDecimal schemaNum = JenaUtils.convertToBigDecimal(stmt.getObject());
+						for(PropertyAndObject pao:poalWithThisProperty)
+							{
+							BigDecimal modelNum = JenaUtils.convertToBigDecimal(pao.getObject());
+							if(modelNum==null)
+								{
+								errors.add(p.toString()+" illegal value for "+pao);
+								continue;
+								}
+							else if(modelNum.compareTo(schemaNum)<0)
+								{
+								errors.add(p.toString()+" illegal value for "+pao+" < "+schemaNum);
+								continue;
+								}
+							}
+						}
+					else if(stmt.getPredicate().getURI().equals(XSD.getURI()+"maxExclusive") && 
+							JenaUtils.convertToBigDecimal(stmt.getObject())!=null
+							)
+						{
+						BigDecimal schemaNum = JenaUtils.convertToBigDecimal(stmt.getObject());
+						for(PropertyAndObject pao:poalWithThisProperty)
+							{
+							BigDecimal modelNum = JenaUtils.convertToBigDecimal(pao.getObject());
+							if(modelNum==null)
+								{
+								errors.add(p.toString()+" illegal value for "+pao);
+								continue;
+								}
+							else if(modelNum.compareTo(schemaNum)>0)
+								{
+								errors.add(p.toString()+" illegal value for "+pao+" > "+schemaNum);
+								continue;
+								}
+							}
+						}
+					else if(stmt.getPredicate().getURI().equals(XSD.getURI()+"pattern") &&
+							stmt.getObject().isLiteral()
+							)
+						{
+						Pattern regex=null;
+						try
+							{
+							regex=Pattern.compile(stmt.getObject().asLiteral().getValue().toString());
+							}
+						catch(Exception err)
+							{
+							LOG.error("bad regex in schema",err);
+							continue;
+							}
+						for(PropertyAndObject pao:poalWithThisProperty)
+							{
+							//TODO
+							}
+						
+						
+						}
+					else if(stmt.getPredicate().getURI().equals(XSD.getURI()+"length") && 
+							JenaUtils.convertToBigInteger(stmt.getObject())!=null
+							)
+						{
+						//TODO
+						}
+					else if(stmt.getPredicate().getURI().equals(XSD.getURI()+"minLength") && 
+							JenaUtils.convertToBigInteger(stmt.getObject())!=null
+							)
+						{
+						//TODO
+						}
+					else if(stmt.getPredicate().getURI().equals(XSD.getURI()+"maxLength") && 
+							JenaUtils.convertToBigInteger(stmt.getObject())!=null
+							)
+						{
+						//TODO
+						}
 					}
 				} 
 			finally
