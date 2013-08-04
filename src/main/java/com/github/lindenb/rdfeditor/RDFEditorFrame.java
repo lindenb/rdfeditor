@@ -35,8 +35,16 @@ import org.apache.log4j.spi.LoggingEvent;
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
 import com.github.lindenb.rdfeditor.swing.iframe.AbstractInternalFrame;
 import com.github.lindenb.rdfeditor.swing.iframe.OntClassInternalFrame;
+import com.hp.hpl.jena.datatypes.xsd.XSDDatatype;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.ResourceFactory;
+import com.hp.hpl.jena.vocabulary.DC;
+import com.hp.hpl.jena.vocabulary.OWL;
+import com.hp.hpl.jena.vocabulary.RDF;
+import com.hp.hpl.jena.vocabulary.RDFS;
+import com.hp.hpl.jena.vocabulary.XSD;
 
 
 
@@ -243,15 +251,112 @@ public class RDFEditorFrame
 		this.rdfStoreDirtyFlag=true;
 		}
 	
+	private static Model createDefaultSchema()
+		{
+		Model m=ModelFactory.createDefaultModel();
+		m.setNsPrefix("rdf",RDF.getURI());
+		m.setNsPrefix("rdfs",RDFS.getURI());
+		m.setNsPrefix("owl",OWL.getURI());
+		m.setNsPrefix("dc",DC.getURI());
+		
+		//class is rdfs:Class
+		Resource r1=m.createResource(RDFS.Class.getURI());
+		m.add(r1,RDF.type,RDFS.Class);
+		m.add(r1, RDFS.label, "Class");
+		m.add(r1, RDFS.comment, "a rdfs:Class");
+		
+		//class is rdfs:Label
+		Resource r2=m.createResource(RDF.Property.getURI());
+		m.add(r2,RDF.type,RDFS.Class);
+		m.add(r2, RDFS.label, "Property");
+		m.add(r2, RDFS.comment, "a rdf:Property");
+		
+		//property rdfs:label
+		Resource r=m.createResource(RDFS.label.getURI());
+		m.add(r,RDF.type,RDF.Property);
+		m.add(r, RDFS.label, "label");
+		m.add(r, RDFS.comment, "a rdfs:label");
+		m.add(r, RDFS.domain,RDFS.Class);
+		m.add(r, RDFS.domain,RDF.Property);
+		m.add(r, RDFS.range,XSD.xstring);
+		m.add(r, OWL.cardinality,m.createTypedLiteral(1));
+		
+		//property rdfs:comment
+		r=m.createResource(RDFS.comment.getURI());
+		m.add(r,RDF.type,RDF.Property);
+		m.add(r, RDFS.label, "comment");
+		m.add(r, RDFS.comment, "a rdfs:comment");
+		m.add(r, RDFS.domain,RDFS.Class);
+		m.add(r, RDFS.domain,RDF.Property);
+		m.add(r, RDFS.range,XSD.xstring);
+		m.add(r, OWL.minCardinality,m.createTypedLiteral(0));
+		m.add(r, OWL.maxCardinality,m.createTypedLiteral(1));
+		
+		//property owl:cardinality
+		r=m.createResource(OWL.minCardinality.getURI());
+		m.add(r,RDF.type,RDF.Property);
+		m.add(r, RDFS.label, "minCardinality");
+		m.add(r, RDFS.comment, "min cardinality");
+		m.add(r, RDFS.domain,RDF.Property);
+		m.add(r, RDFS.range,XSD.nonNegativeInteger);
+		m.add(r, OWL.minCardinality,m.createTypedLiteral(0));
+		m.add(r, OWL.maxCardinality,m.createTypedLiteral(1));
+		
+		r=m.createResource(OWL.maxCardinality.getURI());
+		m.add(r,RDF.type,RDF.Property);
+		m.add(r, RDFS.label, "maxCardinality");
+		m.add(r, RDFS.comment, "max cardinality");
+		m.add(r, RDFS.domain,RDF.Property);
+		m.add(r, RDFS.range,XSD.nonNegativeInteger);
+		m.add(r, OWL.minCardinality,m.createTypedLiteral(0));
+		m.add(r, OWL.maxCardinality,m.createTypedLiteral(1));
+	
+		r=m.createResource(OWL.cardinality.getURI());
+		m.add(r,RDF.type,RDF.Property);
+		m.add(r, RDFS.label, "cardinality");
+		m.add(r, RDFS.comment, "cardinality");
+		m.add(r, RDFS.domain,RDF.Property);
+		m.add(r, RDFS.range,XSD.nonNegativeInteger);
+		m.add(r, OWL.minCardinality,m.createTypedLiteral(0));
+		m.add(r, OWL.maxCardinality,m.createTypedLiteral(1));
+
+		r=m.createResource(XSD.getURI()+"pattern");
+		m.add(r,RDF.type,RDF.Property);
+		m.add(r, RDFS.label, "pattern");
+		m.add(r, RDFS.comment, "regular expression pattern");
+		m.add(r, RDFS.domain,RDF.Property);
+		m.add(r, RDFS.range,XSD.xstring);
+		m.add(r, OWL.minCardinality,m.createTypedLiteral(0));
+		m.add(r, OWL.maxCardinality,m.createTypedLiteral(1));
+
+		r=m.createResource(XSD.getURI()+"minLength");
+		m.add(r,RDF.type,RDF.Property);
+		m.add(r, RDFS.label, "minLength");
+		m.add(r, RDFS.comment, "min-length");
+		m.add(r, RDFS.domain,RDF.Property);
+		m.add(r, RDFS.range,XSD.nonNegativeInteger);
+		m.add(r, OWL.minCardinality,m.createTypedLiteral(0));
+		m.add(r, OWL.maxCardinality,m.createTypedLiteral(1));
+		
+		r=m.createResource(XSD.getURI()+"maxLength");
+		m.add(r,RDF.type,RDF.Property);
+		m.add(r, RDFS.label, "maxLength");
+		m.add(r, RDFS.comment, "max-length");
+		m.add(r, RDFS.domain,RDF.Property);
+		m.add(r, RDFS.range,XSD.nonNegativeInteger);
+		m.add(r, OWL.minCardinality,m.createTypedLiteral(0));
+		m.add(r, OWL.maxCardinality,m.createTypedLiteral(1));
+		
+		
+		return m;
+		}
+	
 	public static void main(String[] args)
 		throws Exception
 		{
 		LOG.setLevel(Level.INFO);
 		
-		args=new String[]{"-s",
-				"file:///home/lindenb/src/yardfapp/schema.rdf",
-				"/home/lindenb/src/yardfapp/data.rdf"
-				};
+		
 		String schemaURI=null;
 		int optind=0;
 		while(optind<args.length)
@@ -280,11 +385,7 @@ public class RDFEditorFrame
 				}
 			++optind;
 			}
-		if(schemaURI==null)
-			{
-			System.err.println("Schema URI missing");
-			return;
-			}
+		
 		File rdfStoreFile=null;
 		if(optind==args.length)
 			{
@@ -300,9 +401,19 @@ public class RDFEditorFrame
 			return;
 			}
 		
-		Model schema=ModelFactory.createDefaultModel();
-		schema.read(schemaURI);
+		Model schema=null;
 		
+		if(schemaURI!=null)
+			{
+			LOG.info("loading schema: "+schemaURI);
+			schema=ModelFactory.createDefaultModel();
+			schema.read(schemaURI);
+			}
+		else
+			{
+			LOG.info("using the default schema");
+			schema=RDFEditorFrame.createDefaultSchema();
+			}
 			
 		
 		Model model=ModelFactory.createDefaultModel();
