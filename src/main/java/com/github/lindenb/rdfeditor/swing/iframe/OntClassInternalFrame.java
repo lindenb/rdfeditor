@@ -15,7 +15,6 @@ import javax.swing.JButton;
 import javax.swing.JInternalFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -26,6 +25,7 @@ import javax.swing.event.ListSelectionListener;
 import com.github.lindenb.rdfeditor.RDFEditorFrame;
 import com.github.lindenb.rdfeditor.rdf.JenaUtils;
 import com.github.lindenb.rdfeditor.swing.InstanceCreator;
+import com.github.lindenb.rdfeditor.swing.table.action.SearchAction;
 import com.github.lindenb.rdfeditor.swing.table.model.AbstractGenericTableModel;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.ResIterator;
@@ -173,12 +173,19 @@ public class OntClassInternalFrame
 		
 		pane.add(new JLabel("The rdfs:Class defined in the schema"),BorderLayout.NORTH);
 		
-		JMenuBar bar=new JMenuBar();
-		setJMenuBar(bar);
+		
 		JMenu menu=new JMenu("Classes");
-		bar.add(menu);
+		getJMenuBar().add(menu);
 		menu.add(getActionMap().get("view.instances"));
 		menu.add(getActionMap().get("create.instance"));
+		
+		menu=new JMenu("Table");
+		getJMenuBar().add(menu);
+		getActionMap().put("search.table",new SearchAction(this.instanceTable, false));
+		getActionMap().put("search.again.table",new SearchAction(this.instanceTable, true));
+		menu.add(getActionMap().get("search.table"));
+		menu.add(getActionMap().get("search.again.table"));
+
 		
 		reloadModel();
 		}

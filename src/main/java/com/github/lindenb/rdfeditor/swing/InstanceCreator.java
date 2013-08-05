@@ -13,6 +13,7 @@ import java.awt.event.WindowEvent;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -52,6 +53,7 @@ import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
+import com.hp.hpl.jena.vocabulary.DCTerms;
 import com.hp.hpl.jena.vocabulary.OWL;
 import com.hp.hpl.jena.vocabulary.RDF;
 import com.hp.hpl.jena.vocabulary.RDFS;
@@ -114,8 +116,20 @@ public class InstanceCreator
 				}
 			}
 		@Override
-		public boolean isCellEditable(int arg0, int arg1)
+		public boolean isCellEditable(int row, int col)
 			{
+			PropertyAndObject pao=getElementAt(row);
+			if(pao==null || pao.getPredicate()==null)
+				{
+				return col==0;
+				}
+			
+			if(pao.getPredicate()!=null )
+				{
+				//the following are read-only
+				if(pao.getPredicate().equals(DCTerms.creator)) return false;
+				if(pao.getPredicate().equals(DCTerms.created)) return false;
+				}
 			return true;
 			}
 		}
@@ -241,9 +255,45 @@ public class InstanceCreator
 	
 	private void saveToModel()
 		{
-		getRDFDataStore().removeAll(this.subject, null, null);
+		List<Statement> to_delete=new ArrayList<Statement>();
+		ExtendedIterator<Statement> iter=null;
+		try {
+			iter=getRDFDataStore().listStatements(this.subject, null,(RDFNode) null);
+			while(iter.hasNext())
+				{
+				Statement stmt=iter.next();
+				if(stmt.getPredicate().equals(DCTerms.created)) continue;
+				if(stmt.getPredicate().equals(DCTerms.creator)) continue;
+				to_delete.add(stmt);
+				}
+			} 
+		finally
+			{
+			if(iter!=null) iter.close();
+			}
+		getRDFDataStore().remove(to_delete);
 		
+		//add creation date
+		if(!getRDFDataStore().contains(this.subject,DCTerms.created,(RDFNode)null))
+			{
+			getRDFDataStore().add(this.subject,DCTerms.created, new Date().toString());
+			}
+		//add author
+		if(!getRDFDataStore().contains(this.subject,DCTerms.creator,(RDFNode)null) &&
+			System.getProperty("user.name")!=null)
+			{
+			getRDFDataStore().add(this.subject,DCTerms.creator,System.getProperty("user.name"));
+			}
+		//add modification
+		getRDFDataStore().add(this.subject,DCTerms.modified,new Date().toString());
+		//add rdf:type
 		getRDFDataStore().add(this.subject,RDF.type, this.ontClass);
+		
+		if(System.getProperty("user.name")!=null)
+			{
+			getRDFDataStore().add(this.subject,DCTerms.contributor,System.getProperty("user.name"));
+			}
+		
 		for(PropertyAndObject p:getValidPropertyAndObjects())
 			{
 			getRDFDataStore().add(this.subject, p.getPredicate(), p.getObject());

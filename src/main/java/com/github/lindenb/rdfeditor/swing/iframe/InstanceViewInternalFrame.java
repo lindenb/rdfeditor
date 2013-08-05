@@ -9,6 +9,7 @@ import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JInternalFrame;
+import javax.swing.JMenu;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -17,6 +18,7 @@ import javax.swing.JTextField;
 
 import com.github.lindenb.rdfeditor.RDFEditorFrame;
 import com.github.lindenb.rdfeditor.rdf.PropertyAndObject;
+import com.github.lindenb.rdfeditor.swing.table.action.SearchAction;
 import com.github.lindenb.rdfeditor.swing.table.model.InDomainTableModel;
 import com.github.lindenb.rdfeditor.swing.table.model.ResourcesInRangeTableModel;
 import com.github.lindenb.rdfeditor.swing.table.ui.RDFTableCellRenderer;
@@ -102,6 +104,20 @@ public class InstanceViewInternalFrame extends AbstractInternalFrame
 		
 
 		pane.add(new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,left,right),BorderLayout.CENTER);
+		
+		
+		JMenu menu=new JMenu("Table");
+		getJMenuBar().add(menu);
+		getActionMap().put("search.table1",new SearchAction(this.inDomainTable,"Search domain...", false));
+		getActionMap().put("search.again.table1",new SearchAction(this.inDomainTable,"Search domain again", true));
+		menu.add(getActionMap().get("search.table1"));
+		menu.add(getActionMap().get("search.again.table1"));
+		getActionMap().put("search.table2",new SearchAction(this.resourcesInRangeTable,"Search range...", false));
+		getActionMap().put("search.again.table2",new SearchAction(this.resourcesInRangeTable,"Search range again", true));
+		menu.add(getActionMap().get("search.table2"));
+		menu.add(getActionMap().get("search.again.table2"));
+
+		
 		fireModelChanged();
 		}
 	

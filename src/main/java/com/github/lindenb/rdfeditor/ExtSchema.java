@@ -11,5 +11,5 @@ public class ExtSchema
 		}
 	public static final Property unique=ResourceFactory.createProperty(getURI(), "unique");
 	public static final Property regex=ResourceFactory.createProperty(getURI(), "regex");
-	public static final Property inListing=ResourceFactory.createProperty(getURI(), "in-listing");
+	//public static final Property inListing=ResourceFactory.createProperty(getURI(), "in-listing");
 	}

@@ -24,6 +24,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.JTextField;
+import javax.swing.JTextPane;
 import javax.swing.JToolBar;
 import javax.swing.SwingUtilities;
 
@@ -41,6 +42,7 @@ import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.vocabulary.DC;
+import com.hp.hpl.jena.vocabulary.DCTerms;
 import com.hp.hpl.jena.vocabulary.OWL;
 import com.hp.hpl.jena.vocabulary.RDF;
 import com.hp.hpl.jena.vocabulary.RDFS;
@@ -67,7 +69,6 @@ public class RDFEditorFrame
 	private class SwingAppender
 		extends AppenderSkeleton
 		{
-		
 		@Override
 		protected void append(LoggingEvent evt)
 			{
@@ -75,8 +76,11 @@ public class RDFEditorFrame
 			logField.setText(evt.getRenderedMessage());
 			logField.setCaretPosition(0);
 			}
+		
+		
 		@Override
-		public void close() {
+		public void close()
+			{
 			
 			}
 		
@@ -195,7 +199,7 @@ public class RDFEditorFrame
 		try
 			{
 			fw=new FileWriter(f);
-			this.model.write(fw, "en",f.toURI().toString());
+			this.model.write(fw,f.toURI().toString(), "en");
 			fw.flush();
 			fw.close();
 			this.saveAsFile=f;
@@ -259,6 +263,7 @@ public class RDFEditorFrame
 		m.setNsPrefix("owl",OWL.getURI());
 		m.setNsPrefix("dc",DC.getURI());
 		m.setNsPrefix("xsd",XSD.getURI());
+		m.setNsPrefix("dcterms",DCTerms.getURI());
 		
 		//class is rdfs:Class
 		Resource r1=m.createResource(RDFS.Class.getURI());
@@ -354,8 +359,16 @@ public class RDFEditorFrame
 		m.add(r, RDFS.comment, "rdfs:range");
 		m.add(r, RDFS.domain,RDF.Property);
 		m.add(r, RDFS.range,RDFS.Resource);
-		m.add(r, OWL.minCardinality,m.createTypedLiteral(0));
-		m.add(r, OWL.maxCardinality,m.createTypedLiteral(1));
+		m.add(r, OWL.cardinality,m.createTypedLiteral(1));
+
+		
+		r=RDFS.domain;
+		m.add(r,RDF.type,RDF.Property);
+		m.add(r, RDFS.label, "domain");
+		m.add(r, RDFS.comment, "rdfs:domain");
+		m.add(r, RDFS.domain,RDF.Property);
+		m.add(r, RDFS.range,RDFS.Class);
+		m.add(r, OWL.cardinality,m.createTypedLiteral(1));
 
 		
 		return m;
@@ -437,7 +450,33 @@ public class RDFEditorFrame
 		
 		
 		final RDFEditorFrame frame=new RDFEditorFrame(rdfStoreFile,model,schema);
-	
+		if(schemaURI==null)
+			{
+			frame.addWindowListener(new WindowAdapter()
+				{
+				@Override
+					public void windowOpened(WindowEvent arg0) {
+					
+					AbstractInternalFrame iframe=new AbstractInternalFrame(frame)
+						{
+						
+						};
+					JTextPane txtPane=new JTextPane();
+					txtPane.setContentType("text/html");
+					txtPane.setText(
+							"<html><body>"+
+							"<h1>Default Schema</h1>"+
+							"You're using the default schema."+
+							"</body></html>"
+							);
+					txtPane.setEditable(false);
+					iframe.setClosable(true);
+					iframe.setContentPane(txtPane);
+					frame.desktopPane.add(iframe);
+					iframe.setVisible(true);
+					}
+				});
+			}
 		Dimension screen=Toolkit.getDefaultToolkit().getScreenSize();
 		frame.setBounds(50,50,screen.width-100,screen.height-100);
 		try

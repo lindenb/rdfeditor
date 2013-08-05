@@ -10,6 +10,7 @@ import java.awt.event.MouseEvent;
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JInternalFrame;
+import javax.swing.JMenu;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -19,6 +20,7 @@ import javax.swing.event.ListSelectionListener;
 
 import com.github.lindenb.rdfeditor.RDFEditorFrame;
 import com.github.lindenb.rdfeditor.swing.InstanceCreator;
+import com.github.lindenb.rdfeditor.swing.table.action.SearchAction;
 import com.github.lindenb.rdfeditor.swing.table.model.InstanceListTableModel;
 import com.hp.hpl.jena.rdf.model.Resource;
 
@@ -101,6 +103,17 @@ public class InstanceListInternalFrame
 				}
 			});
 		
+		JMenu menu=new JMenu("Instances");
+		getJMenuBar().add(menu);
+		menu.add(new JButton(getActionMap().get("view.instance")));
+		menu.add(new JButton(getActionMap().get("new.instance")));
+		
+		menu=new JMenu("Table");
+		getJMenuBar().add(menu);
+		getActionMap().put("search.table",new SearchAction(this.instanceTable, false));
+		getActionMap().put("search.again.table",new SearchAction(this.instanceTable, true));
+		menu.add(getActionMap().get("search.table"));
+		menu.add(getActionMap().get("search.again.table"));
 
 		}
 	

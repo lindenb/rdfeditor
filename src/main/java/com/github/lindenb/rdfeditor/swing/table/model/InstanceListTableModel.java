@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Vector;
 
 
-import com.github.lindenb.rdfeditor.ExtSchema;
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
+import com.hp.hpl.jena.rdf.model.Literal;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
@@ -14,7 +14,7 @@ import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
-import com.hp.hpl.jena.util.iterator.Filter;
+import com.hp.hpl.jena.vocabulary.OWL;
 import com.hp.hpl.jena.vocabulary.RDF;
 import com.hp.hpl.jena.vocabulary.RDFS;
 
@@ -45,17 +45,13 @@ public class InstanceListTableModel
 		ExtendedIterator<Resource> iter=null;
 		try
 			{
-			iter=getRDFSchema().listResourcesWithProperty(RDFS.domain,ontClass).filterKeep(new Filter<Resource>()
-				{
-				@Override
-				public boolean accept(Resource subject)
-					{
-					return subject.hasLiteral(ExtSchema.inListing, true);
-					}
-				});
+			final Literal one=getRDFSchema().createTypedLiteral(1);
+			iter=getRDFSchema().listResourcesWithProperty(RDFS.domain,ontClass);
 			while(iter.hasNext())
 				{
 				Resource r=iter.next();
+				if(!r.hasProperty(RDF.type, RDF.Property)) continue;
+				if(!(r.hasLiteral(OWL.maxCardinality,one) || r.hasLiteral(OWL.cardinality,one))) continue;
 				this.columns.add(ResourceFactory.createProperty(r.getURI()));
 				}
 			if(this.columns.isEmpty()) LOG.warn("No column found for "+ontClass);

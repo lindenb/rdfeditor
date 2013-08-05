@@ -1,6 +1,7 @@
 package com.github.lindenb.rdfeditor.swing.iframe;
 
 import javax.swing.JInternalFrame;
+import javax.swing.JMenuBar;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
 
@@ -50,6 +51,8 @@ public class AbstractInternalFrame
 				removeInternalFrameListener(this);
 				}
 			});
+		JMenuBar bar=new JMenuBar();
+		setJMenuBar(bar);
 		}
 	
 	public RDFEditorFrame getRDFEditorFrame()

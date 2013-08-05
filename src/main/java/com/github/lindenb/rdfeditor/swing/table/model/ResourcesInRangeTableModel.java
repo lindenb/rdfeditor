@@ -7,9 +7,9 @@ import java.util.Set;
 import java.util.Vector;
 
 
-import com.github.lindenb.rdfeditor.ExtSchema;
 import com.github.lindenb.rdfeditor.rdf.PropertyAndObject;
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
+import com.hp.hpl.jena.rdf.model.Literal;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
@@ -19,6 +19,7 @@ import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.util.iterator.Filter;
+import com.hp.hpl.jena.vocabulary.OWL;
 import com.hp.hpl.jena.vocabulary.RDF;
 import com.hp.hpl.jena.vocabulary.RDFS;
 
@@ -89,19 +90,16 @@ public class ResourcesInRangeTableModel
 		for(Resource ontClass:rdfTypes)
 			{
 			ExtendedIterator<Resource> iterR=null;
+			final Literal one=getRDFSchema().createTypedLiteral(1);
+
 			try
 				{
-				iterR=getRDFSchema().listResourcesWithProperty(RDFS.domain,ontClass).filterKeep(new Filter<Resource>()
-					{
-					@Override
-					public boolean accept(Resource subject)
-						{
-						return subject.hasLiteral(ExtSchema.inListing, true);
-						}
-					});
+				iterR=getRDFSchema().listResourcesWithProperty(RDFS.domain,ontClass);
 				while(iterR.hasNext())
 					{
 					Resource r=iterR.next();
+					if(!r.hasProperty(RDF.type, RDF.Property)) continue;
+					if(!(r.hasLiteral(OWL.maxCardinality,one) || r.hasLiteral(OWL.cardinality,one))) continue;
 					properties.add(ResourceFactory.createProperty(r.getURI()));
 					}
 			
