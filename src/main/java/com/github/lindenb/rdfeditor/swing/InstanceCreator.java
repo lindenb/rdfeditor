@@ -516,7 +516,7 @@ public class InstanceCreator
 		this.schemaAndModel.fireModelChanged();
 		}
 	
-	public static InstanceCreator create(
+	public static Resource createSubject(
 			Component owner,
 			SchemaAndModel schemaAndModel,
 			Resource ontClass
@@ -531,7 +531,6 @@ public class InstanceCreator
 			if(localName==null) localName="class";
 			defaultUri=String.format("urn:%s:%05d",localName,++i);
 			} while(schemaAndModel.getRDFDataStore().containsResource(ResourceFactory.createResource(defaultUri)));
-		Resource subject=null;
 		JTextField tf=new JTextField(defaultUri,50);
 		for(;;)
 			{
@@ -563,14 +562,23 @@ public class InstanceCreator
 					JOptionPane.showMessageDialog(owner, "model already contains that URI:"+tf.getText());
 					continue;
 					}
-				subject=ResourceFactory.createResource(tf.getText());
-				break;
+				return ResourceFactory.createResource(tf.getText());
 				}
 			catch (Exception e)
 				{
 				JOptionPane.showMessageDialog(owner, "Bad URI:" +uri);
 				}
 			}
+		}
+	
+	public static InstanceCreator create(
+			Component owner,
+			SchemaAndModel schemaAndModel,
+			Resource ontClass
+			)
+		{
+		Resource subject=createSubject(owner,schemaAndModel,ontClass);
+		if(subject==null) return null;
 		InstanceCreator dlg=new InstanceCreator(
 				SwingUtilities.windowForComponent(owner),
 				schemaAndModel,

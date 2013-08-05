@@ -1,5 +1,6 @@
 package com.github.lindenb.rdfeditor.rdf;
 
+import java.io.File;
 import java.lang.reflect.Constructor;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -78,6 +79,7 @@ public class JavaDataType extends BaseDatatype{
         tm.registerDatatype(javaString);
         tm.registerDatatype(javaUrl);
         tm.registerDatatype(javaUri);
+        tm.registerDatatype(javaFile);
     }
 	
 	
@@ -105,5 +107,7 @@ public class JavaDataType extends BaseDatatype{
     public static final JavaDataType javaUrl = new JavaDataType(URL.class);
     
     public static final JavaDataType javaUri = new JavaDataType(URI.class);
+
+    public static final JavaDataType javaFile = new JavaDataType(File.class);
 
 	}

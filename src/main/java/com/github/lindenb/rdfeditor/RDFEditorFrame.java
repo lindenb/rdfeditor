@@ -1,19 +1,26 @@
 package com.github.lindenb.rdfeditor;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.prefs.Preferences;
 
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
+import javax.swing.JCheckBox;
 import javax.swing.JDesktopPane;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -27,6 +34,7 @@ import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.JToolBar;
 import javax.swing.SwingUtilities;
+import javax.swing.filechooser.FileFilter;
 
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
@@ -35,6 +43,8 @@ import org.apache.log4j.spi.LoggingEvent;
 
 import com.github.lindenb.rdfeditor.rdf.JavaDataType;
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
+import com.github.lindenb.rdfeditor.swing.SelectFileComponent;
+import com.github.lindenb.rdfeditor.swing.dialog.AskDialog;
 import com.github.lindenb.rdfeditor.swing.iframe.AbstractInternalFrame;
 import com.github.lindenb.rdfeditor.swing.iframe.OntClassInternalFrame;
 import com.hp.hpl.jena.datatypes.TypeMapper;
@@ -48,8 +58,138 @@ import com.hp.hpl.jena.vocabulary.RDF;
 import com.hp.hpl.jena.vocabulary.RDFS;
 import com.hp.hpl.jena.vocabulary.XSD;
 
+@SuppressWarnings("serial")
+class StartupDialog
+	extends AskDialog
+	{
+	SelectFileComponent selectSchema;
+	SelectFileComponent selectDataStore;
+	JCheckBox createSchema;
+	public StartupDialog(Component c)
+		{
+		super(c);
+		setTitle("Startup");
+		setUndecorated(false);
+		JPanel pane=new JPanel(new GridLayout(0, 1, 5, 5));
+		this.selectSchema =new SelectFileComponent();
+		this.selectSchema.setBorder(BorderFactory.createTitledBorder("Schema"));
+		this.selectDataStore =new SelectFileComponent();
+		this.selectDataStore.setBorder(BorderFactory.createTitledBorder("DataStore"));
+		pane.add(this.selectSchema);
+		pane.add(this.selectDataStore);
+		
+		pane.add(this.createSchema=new JCheckBox(".. or create a new Schema"));
+		
+		PropertyChangeListener change=new PropertyChangeListener()
+			{
 
-
+			@Override
+			public void propertyChange(PropertyChangeEvent evt)
+				{
+				doDialogValidation();
+				}
+			};
+			FileFilter ff=new FileFilter()
+				{
+				@Override
+				public String getDescription()
+					{
+					return "RDF/XML files";
+					}
+				
+				@Override
+				public boolean accept(File f)
+					{
+					return f.isDirectory() || (f.isFile() && f.canRead() &&
+							(f.getName().toLowerCase().endsWith(".xml") || f.getName().toLowerCase().endsWith(".rdf")));
+					}
+				};
+		this.selectSchema.setFileFilter(ff);
+		this.selectDataStore.setFileFilter(ff);
+		this.selectDataStore.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		this.selectDataStore.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		
+		this.selectSchema.addPropertyChangeListener(SelectFileComponent.FILE_CHANGED_PROPERTY,change);
+		this.selectDataStore.addPropertyChangeListener(SelectFileComponent.FILE_CHANGED_PROPERTY,change);
+		this.createSchema.addActionListener(new ActionListener()
+				{
+				@Override
+				public void actionPerformed(ActionEvent e)
+					{
+					doDialogValidation();
+					selectDataStore.setEnabled(!createSchema.isSelected());
+					selectSchema.setEnabled(!createSchema.isSelected());
+					}
+			});
+		Preferences prefs=Preferences.userNodeForPackage(RDFEditorFrame.class);
+		String v=prefs.get("schema.file", null);
+		if(v!=null)
+			{
+			try
+				{
+				File f=new File(v);
+				if(f.exists()) selectSchema.setFile(f);
+				}
+			catch (Exception e)
+				{
+				}
+			}
+		v=prefs.get("datastore.file", null);
+		if(v!=null)
+			{
+			try
+				{
+				File f=new File(v);
+				if(f.exists()) selectDataStore.setFile(f);
+				}
+			catch (Exception e)
+				{
+				}
+			}
+		getContentPane().add(pane,BorderLayout.CENTER);
+		}
+	
+	@Override
+	public void doOKAction()
+		{
+		if(!this.createSchema.isSelected())
+			{
+			Preferences prefs=Preferences.userNodeForPackage(RDFEditorFrame.class);
+			
+			File f=selectSchema.getFile();
+			if(f!=null)
+				{
+				prefs.put("schema.file", f.getPath());
+				}
+			f=selectDataStore.getFile();
+			if(f!=null)
+				{
+				prefs.put("datastore.file", f.getPath());
+				}
+			try	{
+				prefs.flush();
+				}
+			catch(Exception err)
+				{
+				
+				}
+			}
+		
+		super.doOKAction();
+		}
+	
+	private void doDialogValidation()
+		{
+		super.okAction.setEnabled(
+				(
+				this.selectSchema.getFile()!=null
+				//&& this.selectDataStore.getFile()!=null 
+				) ||
+				
+				createSchema.isSelected()
+				);
+		}
+	}
 
 @SuppressWarnings("serial")
 public class RDFEditorFrame
@@ -423,6 +563,14 @@ public class RDFEditorFrame
 			{
 			System.err.println("Illegal number of arguments");
 			return;
+			}
+		
+		if(args.length==0)
+			{
+			StartupDialog startup=new StartupDialog(null);
+			startup.pack();
+			startup.setVisible(true);
+			if(startup.getReturnStatus()==StartupDialog.CANCEL_OPTION) return;
 			}
 		
 		Model schema=null;
