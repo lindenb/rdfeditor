@@ -19,7 +19,7 @@ import javax.swing.event.ListSelectionListener;
 
 import com.github.lindenb.rdfeditor.RDFEditorFrame;
 import com.github.lindenb.rdfeditor.swing.InstanceCreator;
-import com.github.lindenb.rdfeditor.swing.table.InstanceListTableModel;
+import com.github.lindenb.rdfeditor.swing.table.model.InstanceListTableModel;
 import com.hp.hpl.jena.rdf.model.Resource;
 
 /** list all instances for the given class */

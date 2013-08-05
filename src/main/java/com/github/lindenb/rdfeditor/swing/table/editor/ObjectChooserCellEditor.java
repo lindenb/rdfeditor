@@ -32,9 +32,9 @@ import javax.swing.table.TableCellEditor;
 import org.apache.log4j.Logger;
 
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
-import com.github.lindenb.rdfeditor.swing.table.AbstractGenericTableModel;
-import com.github.lindenb.rdfeditor.swing.table.InstanceListTableModel;
-import com.github.lindenb.rdfeditor.swing.table.RangeTableDomain;
+import com.github.lindenb.rdfeditor.swing.table.model.AbstractGenericTableModel;
+import com.github.lindenb.rdfeditor.swing.table.model.InstanceListTableModel;
+import com.github.lindenb.rdfeditor.swing.table.model.RangeTableDomainModel;
 import com.github.lindenb.rdfeditor.swing.table.ui.RDFTableCellRenderer;
 import com.github.lindenb.rdfeditor.swing.text.RDFDataTypeTextComponent;
 import com.hp.hpl.jena.datatypes.RDFDatatype;
@@ -286,7 +286,7 @@ public class ObjectChooserCellEditor
 		{
 		ChooseRangeComponentEditor(Property predicate)
 			{
-			super(predicate,new RangeTableDomain(
+			super(predicate,new RangeTableDomainModel(
 					ObjectChooserCellEditor.this.schemaAndModel.getRDFDataStore()
 					));
 			}

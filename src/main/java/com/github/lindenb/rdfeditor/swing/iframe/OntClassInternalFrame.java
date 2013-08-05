@@ -26,7 +26,7 @@ import javax.swing.event.ListSelectionListener;
 import com.github.lindenb.rdfeditor.RDFEditorFrame;
 import com.github.lindenb.rdfeditor.rdf.JenaUtils;
 import com.github.lindenb.rdfeditor.swing.InstanceCreator;
-import com.github.lindenb.rdfeditor.swing.table.AbstractGenericTableModel;
+import com.github.lindenb.rdfeditor.swing.table.model.AbstractGenericTableModel;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.ResIterator;
 import com.hp.hpl.jena.rdf.model.Resource;

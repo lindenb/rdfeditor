@@ -17,8 +17,8 @@ import javax.swing.JTextField;
 
 import com.github.lindenb.rdfeditor.RDFEditorFrame;
 import com.github.lindenb.rdfeditor.rdf.PropertyAndObject;
-import com.github.lindenb.rdfeditor.swing.table.InDomainTableModel;
-import com.github.lindenb.rdfeditor.swing.table.ResourcesInRangeTableModel;
+import com.github.lindenb.rdfeditor.swing.table.model.InDomainTableModel;
+import com.github.lindenb.rdfeditor.swing.table.model.ResourcesInRangeTableModel;
 import com.github.lindenb.rdfeditor.swing.table.ui.RDFTableCellRenderer;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
