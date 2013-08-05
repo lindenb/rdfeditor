@@ -2,11 +2,16 @@ package com.github.lindenb.rdfeditor.swing.table.editor;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.EventObject;
 
+import javax.swing.AbstractAction;
 import javax.swing.AbstractCellEditor;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -19,10 +24,19 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.TableCellEditor;
 
+import org.apache.log4j.Logger;
+
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
+import com.github.lindenb.rdfeditor.swing.table.AbstractGenericTableModel;
 import com.github.lindenb.rdfeditor.swing.table.InstanceListTableModel;
+import com.github.lindenb.rdfeditor.swing.table.RangeTableDomain;
+import com.github.lindenb.rdfeditor.swing.table.ui.RDFTableCellRenderer;
+import com.github.lindenb.rdfeditor.swing.text.RDFDataTypeTextComponent;
 import com.hp.hpl.jena.datatypes.RDFDatatype;
 import com.hp.hpl.jena.datatypes.TypeMapper;
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype;
@@ -30,7 +44,6 @@ import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
-import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.util.iterator.Filter;
@@ -41,46 +54,93 @@ public class ObjectChooserCellEditor
 	extends AbstractCellEditor 
 	implements TableCellEditor,SchemaAndModel
 	{
+	private static final Logger LOG = Logger.getLogger("com.github.lindenb");
+
+	
 	private SchemaAndModel schemaAndModel;
 	private JButton jbutton;
 	private boolean userCanceled=true;
 	private int propertyColumn;
-	private ComponentEditor componentEditor;
+	private SelectValueDialog componentEditor;
 	
-	private interface ComponentEditor
+	private abstract class SelectValueDialog extends JDialog
 		{
-		public Component getComponent();
-		public void setCelleEditorValue(Object v);
-		public RDFNode getCellEditorValue();
-		}
-	
-	private abstract class AbtractComponentEditor extends JPanel implements ComponentEditor
-		{
-		AbtractComponentEditor(Property predicate)
+		private int returnValue=JOptionPane.CANCEL_OPTION;
+		protected AbstractAction okAction=null;		
+		SelectValueDialog(Property predicate)
 			{
-			super(new BorderLayout(5,5));
+			super(SwingUtilities.getWindowAncestor(jbutton),ModalityType.APPLICATION_MODAL);
+			
+			setUndecorated(true);
+			setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+			JPanel pane=new JPanel(new BorderLayout(5,5));
+
+			
+			setContentPane(pane);
+			JPanel bot=new JPanel(new FlowLayout(FlowLayout.TRAILING));
+			pane.add(bot,BorderLayout.SOUTH);
+			bot.add(new JButton(okAction=new AbstractAction("OK")
+				{
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					doOKAction();
+					}
+				}));
+			okAction.setEnabled(false);
+			
+			bot.add(new JButton(new AbstractAction("Cancel")
+				{
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					doCancelAction();
+					}
+				}));
+		
 			if(predicate!=null)
 				{
-				this.setBorder(BorderFactory.createTitledBorder(getRDFSchema().shortForm(predicate.getURI())));
+				pane.setBorder(BorderFactory.createTitledBorder(getRDFSchema().shortForm(predicate.getURI())));
+				setTitle(getRDFSchema().shortForm(predicate.getURI()));
 				}
+			
 			}
-		public Component getComponent()
+		public void doOKAction()
 			{
-			return this;
+			LOG.info("OK ACTION");
+			returnValue=JOptionPane.OK_OPTION;
+			this.setVisible(false);
+			this.dispose();
 			}
+		
+		public void doCancelAction()
+			{
+			LOG.info("CANCEL ACTION");
+			returnValue=JOptionPane.CANCEL_OPTION;
+			this.setVisible(false);
+			this.dispose();
+			}
+		
+		
+		public int getReturnStatus()
+			{
+			return returnValue;
+			}
+		
+		
 		public abstract void setCelleEditorValue(Object v);
 		public abstract RDFNode getCellEditorValue();
 		}
 	
+	
+	
 	private class VoidComponentEditor
-	extends AbtractComponentEditor
+	extends SelectValueDialog
 		{
 		VoidComponentEditor(String msg)
 			{
 			super(null);
 			this.add(new JLabel(msg),BorderLayout.CENTER);
-			
 			}
+		
 		public void setCelleEditorValue(Object v)
 			{
 			}
@@ -90,16 +150,23 @@ public class ObjectChooserCellEditor
 			}
 		}
 	
-	private class TextFieldComponentEditor
-		extends AbtractComponentEditor
+	private abstract class AbstractTextFieldComponentEditor
+	extends SelectValueDialog
 		{
-		private JTextField tf=new JTextField();
-		private RDFDatatype dataType;
-		TextFieldComponentEditor(Property predicate,RDFDatatype dataType)
+		private RDFDataTypeTextComponent tf;
+		AbstractTextFieldComponentEditor(Property predicate,RDFDataTypeTextComponent tf)
 			{
 			super(predicate);
-			this.dataType=dataType;
-			this.add(tf,BorderLayout.CENTER);
+			this.tf=tf;
+			getContentPane().add(tf,BorderLayout.CENTER);
+			tf.addPropertyChangeListener(new PropertyChangeListener()
+				{
+				@Override
+				public void propertyChange(PropertyChangeEvent evt)
+					{
+					okAction.setEnabled(AbstractTextFieldComponentEditor.this.tf.isValidLiteral());
+					}
+				});
 			}
 		public void setCelleEditorValue(Object v)
 			{
@@ -107,49 +174,81 @@ public class ObjectChooserCellEditor
 			}
 		public RDFNode getCellEditorValue()
 			{
-			return ResourceFactory.createTypedLiteral(tf.getText(), this.dataType);
+			RDFNode node=tf.getLiteral();
+			LOG.info("getCellEditorValue:"+node);
+			return node;
 			}
+		}
+	
+	private class TextFieldComponentEditor
+		extends AbstractTextFieldComponentEditor
+		{
+		TextFieldComponentEditor(Property predicate,RDFDatatype dataType)
+			{
+			super(predicate,new RDFDataTypeTextComponent(dataType, new JTextField(20)));
+			}
+	
 		}
 	
 	private class TextAreaComponentEditor
-	extends AbtractComponentEditor
+	extends AbstractTextFieldComponentEditor
 		{
-		private JTextArea tf=new JTextArea(10,50);
-		private RDFDatatype dataType;
 		TextAreaComponentEditor(Property predicate,RDFDatatype dataType)
 			{
-			super(predicate);
-			this.dataType=dataType;
-			this.add(new JScrollPane(tf),BorderLayout.CENTER);
+			super(predicate,new RDFDataTypeTextComponent(dataType, new JTextArea(10,50)));
 			}
-		public void setCelleEditorValue(Object v)
-			{
-			tf.setText(v==null?"":v.toString());
-			}
-		public RDFNode getCellEditorValue()
-			{
-			return ResourceFactory.createTypedLiteral(tf.getText(), this.dataType);
-			}
-		}
 	
-	private class ChooseObjectComponentEditor
-	extends AbtractComponentEditor
+		}
+
+	
+	private class AbstractChooseObjectComponentEditor
+	extends SelectValueDialog
 		{
-		InstanceListTableModel ilt;
+		AbstractGenericTableModel<Resource> tableModel;
 		JTable table;
-		ChooseObjectComponentEditor(Property predicate,Resource range)
+		 AbstractChooseObjectComponentEditor(
+				 Property predicate,
+				 AbstractGenericTableModel<Resource> tableModel
+				 )
 			{
 			super(predicate);
-			this. ilt=new InstanceListTableModel(ObjectChooserCellEditor.this.schemaAndModel,range);
-			this.table=new JTable(ilt);
+			this.tableModel=tableModel;
+			LOG.info("tableModel:"+tableModel.getRowCount()+"/"+tableModel.getColumnCount()+" "+tableModel.getClass());
+			this.table=new JTable(this.tableModel);
 			this.table.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+			
+			RDFTableCellRenderer render=new RDFTableCellRenderer(getRDFSchema(), "");
+			for(int i=0;i< this.table.getColumnModel().getColumnCount();++i)
+				{
+				this.table.getColumnModel().getColumn(i).setCellRenderer(render);
+				}
+			
 			JScrollPane scroll=new JScrollPane(this.table);
-			this.add(scroll,BorderLayout.CENTER);
+			getContentPane().add(scroll,BorderLayout.CENTER);
+			this.table.getSelectionModel().addListSelectionListener(new ListSelectionListener()
+				{
+				@Override
+				public void valueChanged(ListSelectionEvent arg0) {
+					okAction.setEnabled(table.getSelectedRow()!=-1);
+					}
+				});
+			this.table.addMouseListener(new MouseAdapter()
+				{
+				@Override
+				public void mouseClicked(MouseEvent evt)
+					{
+					if(evt.getClickCount()<2) return;
+					int r=table.rowAtPoint(evt.getPoint());
+					if(r==-1) return;
+					table.setRowSelectionInterval(r, r);
+					doOKAction();
+					}
+				});
 			}
 		
 		public void setCelleEditorValue(Object v)
 			{
-			int r=this.ilt.getRows().indexOf(v);
+			int r=this.tableModel.getRows().indexOf(v);
 			if(r==-1)
 				{
 				this.table.getSelectionModel().clearSelection();
@@ -164,10 +263,35 @@ public class ObjectChooserCellEditor
 			{
 			int r=this.table.getSelectedRow();
 			if(r==-1) return null;
-			Resource object=this.ilt.getElementAt(r);
+			Resource object=this.tableModel.getElementAt(r);
 			return object;
 			}
 		}
+	
+	private class ChooseObjectComponentEditor
+		extends AbstractChooseObjectComponentEditor
+		{
+		ChooseObjectComponentEditor(Property predicate,Resource range)
+			{
+			super(predicate,new InstanceListTableModel(
+					ObjectChooserCellEditor.this.schemaAndModel,
+					range
+					));
+			
+			}
+		}
+	
+	private class ChooseRangeComponentEditor
+	extends AbstractChooseObjectComponentEditor
+		{
+		ChooseRangeComponentEditor(Property predicate)
+			{
+			super(predicate,new RangeTableDomain(
+					ObjectChooserCellEditor.this.schemaAndModel.getRDFDataStore()
+					));
+			}
+		}
+	
 	
 	
 	public ObjectChooserCellEditor(
@@ -189,31 +313,23 @@ public class ObjectChooserCellEditor
 					userCanceled=false;
 					
 					
-					
-					
-					JOptionPane jop=new JOptionPane(componentEditor.getComponent(),JOptionPane.PLAIN_MESSAGE,JOptionPane.OK_CANCEL_OPTION,null);
-	                JDialog dialog = jop.createDialog(jbutton,"X");
-	                    dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-	                    dialog.setVisible(true);
+					componentEditor.pack();
+					componentEditor.setLocationRelativeTo(jbutton);
+					LOG.info("size"+componentEditor.getPreferredSize());
+					componentEditor.setVisible(true);
+					if(componentEditor.getReturnStatus()==JOptionPane.OK_OPTION)
+						{
+						LOG.info("use canceled=false");
+						userCanceled=false;
+						}
+					else
+						{
+						LOG.info("use canceled=true");
+						fireEditingCanceled();
+						userCanceled=true;
+						}
 	                   
-	                    if(null == jop.getValue()) {
-	                    System.out.println("User closed dialog");
-	                    userCanceled=true;
-					}
-				else {
-	                    switch(((Integer)jop.getValue()).intValue()) {
-	                    case JOptionPane.OK_OPTION:
-	                        System.out.println("User selected OK");
-	                        break;
-	                    case JOptionPane.CANCEL_OPTION:
-	                    	userCanceled=true;
-	                    	fireEditingCanceled();
-	                        break;
-	                    default:
-	                        System.out.println("User selected " + jop.getValue());
-	                    }
-	                }
-	                    fireEditingStopped();
+	              fireEditingStopped();
 				}});
 		}
 	
@@ -226,10 +342,12 @@ public class ObjectChooserCellEditor
 			{
 			componentEditor=new VoidComponentEditor("select RDF:Property please.");
 			}
+		else if(propObject.equals(RDFS.range))
+			{
+			componentEditor=new ChooseRangeComponentEditor(RDFS.range);
+			}
 		else
 			{
-			final TypeMapper tm=new TypeMapper();
-			XSDDatatype.loadXSDSimpleTypes(tm);
 
 			componentEditor=new VoidComponentEditor("unknown property");
 			ExtendedIterator<Statement> iter=null;
@@ -249,7 +367,7 @@ public class ObjectChooserCellEditor
 					{
 					Statement stmt=iter.next();
 					
-					RDFDatatype datatType=tm.getTypeByName(stmt.getObject().asResource().getURI());
+					RDFDatatype datatType=TypeMapper.getInstance().getTypeByName(stmt.getObject().asResource().getURI());
 					if(datatType!=null)
 						{
 						componentEditor=new TextFieldComponentEditor(predicate,datatType);
@@ -290,9 +408,12 @@ public class ObjectChooserCellEditor
 	 }
 	 
 	@Override
-	public Object getCellEditorValue() {
-		return componentEditor==null?null:componentEditor.getCellEditorValue();
-	}
+	public Object getCellEditorValue()
+		{
+		RDFNode node=componentEditor==null?null:componentEditor.getCellEditorValue();
+		LOG.info("getCellEditorValue: "+node +" canceled:"+isUserCanceled());
+		return node;
+		}
 
 	
 	@Override

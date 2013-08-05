@@ -32,14 +32,14 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 
+import com.github.lindenb.rdfeditor.rdf.JavaDataType;
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
 import com.github.lindenb.rdfeditor.swing.iframe.AbstractInternalFrame;
 import com.github.lindenb.rdfeditor.swing.iframe.OntClassInternalFrame;
-import com.hp.hpl.jena.datatypes.xsd.XSDDatatype;
+import com.hp.hpl.jena.datatypes.TypeMapper;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Resource;
-import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.vocabulary.DC;
 import com.hp.hpl.jena.vocabulary.OWL;
 import com.hp.hpl.jena.vocabulary.RDF;
@@ -258,6 +258,7 @@ public class RDFEditorFrame
 		m.setNsPrefix("rdfs",RDFS.getURI());
 		m.setNsPrefix("owl",OWL.getURI());
 		m.setNsPrefix("dc",DC.getURI());
+		m.setNsPrefix("xsd",XSD.getURI());
 		
 		//class is rdfs:Class
 		Resource r1=m.createResource(RDFS.Class.getURI());
@@ -347,6 +348,15 @@ public class RDFEditorFrame
 		m.add(r, OWL.minCardinality,m.createTypedLiteral(0));
 		m.add(r, OWL.maxCardinality,m.createTypedLiteral(1));
 		
+		r=RDFS.range;
+		m.add(r,RDF.type,RDF.Property);
+		m.add(r, RDFS.label, "range");
+		m.add(r, RDFS.comment, "rdfs:range");
+		m.add(r, RDFS.domain,RDF.Property);
+		m.add(r, RDFS.range,RDFS.Resource);
+		m.add(r, OWL.minCardinality,m.createTypedLiteral(0));
+		m.add(r, OWL.maxCardinality,m.createTypedLiteral(1));
+
 		
 		return m;
 		}
@@ -356,6 +366,7 @@ public class RDFEditorFrame
 		{
 		LOG.setLevel(Level.INFO);
 		
+		JavaDataType.loadJavaTypes(TypeMapper.getInstance());
 		
 		String schemaURI=null;
 		int optind=0;

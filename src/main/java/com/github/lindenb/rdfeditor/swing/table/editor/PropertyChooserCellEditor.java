@@ -8,6 +8,7 @@ import java.awt.event.MouseEvent;
 import java.util.EventObject;
 
 import javax.swing.AbstractCellEditor;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JList;
@@ -36,6 +37,19 @@ public class PropertyChooserCellEditor
 		this.schema=schema;
 		this.propertiesListModel=new PropertiesListModel(schema, ontClass);
 		this.jlist=new JList(propertiesListModel);
+		this.jlist.setCellRenderer(new DefaultListCellRenderer()
+			{
+			@Override
+			public Component getListCellRendererComponent(JList<?> arg0,
+					Object v, int arg2, boolean arg3, boolean arg4) {
+				Component c= super.getListCellRendererComponent(arg0, v, arg2, arg3, arg4);
+				if(v!=null && (v instanceof Resource) && !Resource.class.cast(v).isAnon())
+					{
+					setText(getRDFSchema().shortForm(Resource.class.cast(v).getURI()));
+					}
+				return c;
+				}
+			});
 		this.jbutton=new JButton();
 		this.jbutton.setBorderPainted(false);
 		this.jbutton.addActionListener(new ActionListener()
@@ -48,7 +62,7 @@ public class PropertyChooserCellEditor
 					pane.add(new JScrollPane(jlist),BorderLayout.CENTER);
 					
 					JOptionPane jop=new JOptionPane(pane,JOptionPane.PLAIN_MESSAGE,JOptionPane.OK_CANCEL_OPTION,null);
-	                JDialog dialog = jop.createDialog(jbutton,"X");
+	                JDialog dialog = jop.createDialog(jbutton,"Select a property");
 	                    dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 	                    dialog.setVisible(true);
 	                   
@@ -73,7 +87,7 @@ public class PropertyChooserCellEditor
 				}});
 		}
 	
-	public Model getSchema()
+	public Model getRDFSchema()
 		{
 		return this.schema;
 		}

@@ -60,6 +60,13 @@ public abstract class AbstractGenericTableModel<T> extends AbstractTableModel
 		return rsrc==null?null:getValueOf(rsrc,col);
 		}
 	
+	public void addElement(T o)
+		{
+		int n=getRowCount();
+		this.rows.add(o);
+		fireTableRowsInserted(n, n);
+		}		
+	
 	@Override
 	public int getRowCount()
 		{

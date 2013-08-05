@@ -82,19 +82,36 @@ public class InstanceCreator
 		@Override
 		public void setValueAt(Object v, int row, int col)
 			{
-			if(col!=0)
+			
+			if(v==null)
 				{
-				return ;
+				return;
 				}
-			if(v==null || !(v instanceof Property))
+			if(col==0 && !(v instanceof Property))
+				{
+				return;
+				}
+			if(col==1 && !(v instanceof RDFNode))
 				{
 				return;
 				}
 			
 			PropertyAndObject pao=getElementAt(row);
 			if(pao==null) pao=new PropertyAndObject();
-			pao.setPredicate((Property)v);
+			switch(col)
+				{
+				case 0: pao.setPredicate((Property)v); break;
+				case 1: pao.setObject((RDFNode)v); break;
+				}
+		
 			setElementAt(row,pao);
+			if(row+1==getRowCount())
+				{
+				for(int i=0;i< 10;++i)
+					{
+					super.addElement(null);
+					}
+				}
 			}
 		@Override
 		public boolean isCellEditable(int arg0, int arg1)
@@ -199,7 +216,11 @@ public class InstanceCreator
 	
 	private void doOk()
 		{
-		if(!validateSchema()) return;
+		if(!validateSchema())
+			{
+			LOG.info("schema was not validated");
+			return;
+			}
 		saveToModel();
 		this.setVisible(false);
 		this.dispose();
@@ -412,13 +433,18 @@ public class InstanceCreator
 			}
 		
 		
-		if(errors.isEmpty()) return true;
+		if(errors.isEmpty())
+			{
+			LOG.info("no error while validation");
+			return true;
+			}
 		JList L=new JList(errors);
 		JScrollPane scroll=new JScrollPane(L);
 		JPanel pane=new JPanel(new BorderLayout(5,5));
 		pane.add(scroll,BorderLayout.CENTER);
 		String choices[]={"Fix the errors","I'll fix this later."};
 		Object sel=JOptionPane.showInputDialog(this, pane,"Errors/Warnings",JOptionPane.WARNING_MESSAGE,null,choices,choices[0]);
+		LOG.info("user selected "+sel);
 		if(sel!=choices[1]) return false;
 		return true;
 		}
