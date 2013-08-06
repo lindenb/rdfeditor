@@ -14,7 +14,6 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.util.prefs.Preferences;
 
 import javax.swing.AbstractAction;
@@ -50,6 +49,8 @@ import com.github.lindenb.rdfeditor.swing.iframe.OntClassInternalFrame;
 import com.hp.hpl.jena.datatypes.TypeMapper;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.RDFErrorHandler;
+import com.hp.hpl.jena.rdf.model.RDFWriter;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.vocabulary.DC;
 import com.hp.hpl.jena.vocabulary.DCTerms;
@@ -277,6 +278,17 @@ public class RDFEditorFrame
 			};
 		this.actionMap.put("file.save", action);
 		
+		
+		action=new AbstractAction("Export as ONE RDF") {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				doMenuExportAsOneRDF();
+				}
+			};
+		this.actionMap.put("file.export.one.rdf", action);
+		
+		
+		
 		action=new AbstractAction("Quit") {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
@@ -289,6 +301,8 @@ public class RDFEditorFrame
 		bar.add(menu);
 		menu.add(this.actionMap.get("file.saveas"));
 		menu.add(this.actionMap.get("file.save"));
+		menu.add(this.actionMap.get("file.export.one.rdf"));
+		
 		menu.add(new JSeparator());
 		menu.add(this.actionMap.get("file.quit"));
 		
@@ -312,55 +326,124 @@ public class RDFEditorFrame
 		}
 	
 	
-	public boolean doMenuSaveAs()
+	private File promptFileToSave(File defaultFile,FileFilter filter)
 		{
 		JFileChooser fc;
-		if(this.saveAsFile!=null && this.saveAsFile.exists() && this.saveAsFile.isFile())
+		if(defaultFile!=null && defaultFile.exists() && defaultFile.isFile())
 			{
-			fc=new JFileChooser(this.saveAsFile.getParentFile());
+			fc=new JFileChooser(defaultFile.getParentFile());
+			fc.setSelectedFile(defaultFile);
+			}
+		else if(defaultFile!=null && defaultFile.exists() && defaultFile.isDirectory())
+			{
+			fc=new JFileChooser(defaultFile);
+			}
+		else if(defaultFile!=null && defaultFile.getParentFile()!=null && defaultFile.getParentFile().exists())
+			{
+			fc=new JFileChooser(defaultFile.getParentFile());
 			}
 		else
 			{
 			fc=new JFileChooser();
 			}
-		if(fc.showSaveDialog(this)!=JFileChooser.APPROVE_OPTION) return false;
+		if(filter!=null) fc.setFileFilter(filter);
+		if(fc.showSaveDialog(this)!=JFileChooser.APPROVE_OPTION) return null;
 		File f2=fc.getSelectedFile();
-		if(f2.exists() && JOptionPane.showConfirmDialog(this, "File Exists Overwrite ?","Overwrite",JOptionPane.WARNING_MESSAGE,JOptionPane.OK_CANCEL_OPTION,null)!=JOptionPane.OK_OPTION)
+		if(f2.exists() && JOptionPane.showConfirmDialog(
+				this,
+				"File Exists Overwrite ?",
+				"Overwrite",
+				JOptionPane.WARNING_MESSAGE,
+				JOptionPane.OK_CANCEL_OPTION,
+				null)!=JOptionPane.OK_OPTION)
 			{
+			return null;
+			}
+		return f2;
+		}
+	
+	public boolean doMenuSaveAs()
+		{
+		File f2=promptFileToSave(this.saveAsFile,null);
+		if(f2==null) return false;
+		return doMenuSave(f2);
+		}
+	
+	public boolean doMenuExportAsOneRDF()
+		{
+		File f2=promptFileToSave(this.saveAsFile,null);
+		if(f2==null) return false;
+		Model unified=ModelFactory.createUnion(this.model, this.schema);
+		boolean b=saveModelToFile(unified,f2);
+		unified.close();
+		return b;
+		}
+
+	private static boolean saveModelToFile(Model model,File f)
+		{
+		FileWriter fw=null;
+		try
+			{
+			fw=new FileWriter(f);
+			RDFWriter rdfw= model.getWriter("RDF/XML");
+			rdfw.setProperty("showDoctypeDeclaration", true);
+			rdfw.setProperty("showXmlDeclaration", true);
+			rdfw.setErrorHandler(new RDFErrorHandler()
+					{
+					
+					@Override
+					public void warning(Exception t) {
+						LOG.warn("warning", t);
+					}
+					
+					@Override
+					public void fatalError(Exception t) {
+						LOG.fatal("fatal", t);
+						
+					}
+					
+					@Override
+					public void error(Exception t) {
+						LOG.error("error", t);
+						
+					}
+				});
+			rdfw.write(model, fw,f.toURI().toString());
+			fw.flush();
+			fw.close();
+			}
+		catch(Exception err)
+			{
+			LOG.error("error", err);
 			return false;
 			}
-		return doMenuSave(f2);
+		return true;
 		}
 	
 	public boolean doMenuSave(File f)
 		{
 		if(f==null) return doMenuSaveAs();
-		FileWriter fw=null;
-		try
-			{
-			fw=new FileWriter(f);
-			this.model.write(fw,f.toURI().toString(), "en");
-			fw.flush();
-			fw.close();
-			this.saveAsFile=f;
-			}
-		catch(IOException err)
-			{
-			JOptionPane.showMessageDialog(this, ""+err.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
-			return false;
-			}
-		finally
-			{
-			
-			}
 		
+		if(!saveModelToFile(this.model, f)) return false;
+			
+		this.saveAsFile=f;
+		this.rdfStoreDirtyFlag=false;
 		return true;
 		}
-	public void doMenuQuit()
+	
+	/** invoked when the window is closing */
+	private void doMenuQuit()
 		{	
 		if(this.rdfStoreDirtyFlag)
 			{
-			doMenuSaveAs();
+			if(JOptionPane.showConfirmDialog(this,
+					"Model was not saved. Do you wish to save it before Closing ?",
+					"Save model ?",
+					JOptionPane.WARNING_MESSAGE,
+					JOptionPane.YES_NO_OPTION, null)!=JOptionPane.NO_OPTION)
+				{
+				doMenuSave(this.saveAsFile);
+				}
 			}
 		this.setVisible(false);
 		this.dispose();
@@ -520,66 +603,79 @@ public class RDFEditorFrame
 		LOG.setLevel(Level.INFO);
 		
 		JavaDataType.loadJavaTypes(TypeMapper.getInstance());
+		Dimension screen=Toolkit.getDefaultToolkit().getScreenSize();
 		
-		String schemaURI=null;
-		int optind=0;
-		while(optind<args.length)
-			{
-			if(args[optind].equals("-h"))
-				{
-				return;
-				}
-			else if(args[optind].equals("-s") && optind+1 < args.length)
-				{
-				schemaURI=args[++optind];
-				}
-			else if(args[optind].equals("--"))
-				{
-				optind++;
-				break;
-				}
-			else if(args[optind].startsWith("-"))
-				{
-				System.err.println("Unnown option: "+args[optind]);
-				return;
-				}
-			else
-				{
-				break;
-				}
-			++optind;
-			}
-		
+		File schemaFile=null;
 		File rdfStoreFile=null;
-		if(optind==args.length)
-			{
-			rdfStoreFile=null;
-			}
-		else if(optind+1==args.length)
-			{
-			rdfStoreFile=new File(args[optind]);
-			}
-		else
-			{
-			System.err.println("Illegal number of arguments");
-			return;
-			}
 		
 		if(args.length==0)
 			{
+			LOG.info("invoking GUI dialog startup");
 			StartupDialog startup=new StartupDialog(null);
 			startup.pack();
+			Dimension d=startup.getPreferredSize();
+			startup.setBounds((screen.width-d.width)/2, (screen.height-d.height)/2, d.width, d.height);
+
 			startup.setVisible(true);
 			if(startup.getReturnStatus()==StartupDialog.CANCEL_OPTION) return;
+			schemaFile=startup.selectSchema.getFile();
+			}
+		else
+			{
+			LOG.info("parsing cmd line arguments.");
+			int optind=0;
+			while(optind<args.length)
+				{
+				if(args[optind].equals("-h"))
+					{
+					return;
+					}
+				else if(args[optind].equals("-s") && optind+1 < args.length)
+					{
+					schemaFile=new File(args[++optind]);
+					}
+				else if(args[optind].equals("--"))
+					{
+					optind++;
+					break;
+					}
+				else if(args[optind].startsWith("-"))
+					{
+					System.err.println("Unnown option: "+args[optind]);
+					return;
+					}
+				else
+					{
+					break;
+					}
+				++optind;
+				}
+			
+			
+			if(optind==args.length)
+				{
+				rdfStoreFile=null;
+				}
+			else if(optind+1==args.length)
+				{
+				rdfStoreFile=new File(args[optind]);
+				}
+			else
+				{
+				System.err.println("Illegal number of arguments");
+				return;
+				}
 			}
 		
 		Model schema=null;
 		
-		if(schemaURI!=null)
+		if(schemaFile!=null)
 			{
-			LOG.info("loading schema: "+schemaURI);
+			LOG.info("loading schema: "+schemaFile);
 			schema=ModelFactory.createDefaultModel();
-			schema.read(schemaURI);
+			FileReader r=new FileReader(schemaFile);
+			schema.read(r,schemaFile.toURI().toString());
+			r.close();
 			}
 		else
 			{
@@ -589,16 +685,21 @@ public class RDFEditorFrame
 			
 		
 		Model model=ModelFactory.createDefaultModel();
-		if(rdfStoreFile!=null)
+		if(rdfStoreFile!=null && schemaFile!=null)
 			{
+			LOG.info("loading dataStore: "+schemaFile);
 			FileReader fr=new FileReader(rdfStoreFile);
 			model.read(fr, rdfStoreFile.toURI().toString());
 			fr.close();
 			}
+		else
+			{
+			model.setNsPrefixes(schema.getNsPrefixMap());
+			}
 		
 		
 		final RDFEditorFrame frame=new RDFEditorFrame(rdfStoreFile,model,schema);
-		if(schemaURI==null)
+		if(schemaFile==null)
 			{
 			frame.addWindowListener(new WindowAdapter()
 				{
@@ -625,7 +726,6 @@ public class RDFEditorFrame
 					}
 				});
 			}
-		Dimension screen=Toolkit.getDefaultToolkit().getScreenSize();
 		frame.setBounds(50,50,screen.width-100,screen.height-100);
 		try
 			{

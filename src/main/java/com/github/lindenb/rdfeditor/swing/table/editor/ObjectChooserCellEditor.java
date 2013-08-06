@@ -32,9 +32,9 @@ import org.apache.log4j.Logger;
 
 import com.github.lindenb.rdfeditor.rdf.JavaDataType;
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
-import com.github.lindenb.rdfeditor.swing.InstanceCreator;
 import com.github.lindenb.rdfeditor.swing.SelectFileComponent;
 import com.github.lindenb.rdfeditor.swing.dialog.AskDialog;
+import com.github.lindenb.rdfeditor.swing.dialog.AskURI;
 import com.github.lindenb.rdfeditor.swing.table.model.AbstractGenericTableModel;
 import com.github.lindenb.rdfeditor.swing.table.model.InstanceListTableModel;
 import com.github.lindenb.rdfeditor.swing.table.model.RangeTableDomainModel;
@@ -242,15 +242,15 @@ public class ObjectChooserCellEditor
 			super.bottomPane.add(new JButton(new AbstractAction("... or create a new "+getRDFSchema().shortForm(range.getURI()))
 				{
 				@Override
-				public void actionPerformed(ActionEvent arg0)
+				public void actionPerformed(ActionEvent evt)
 					{
+					AskURI asker=new AskURI(ChooseObjectComponentEditor.this, getRDFDataStore(), ChooseObjectComponentEditor.this.range);
+					asker.pack();
+					asker.setLocationRelativeTo((Component)evt.getSource());
+					asker.setVisible(true);
+					if(asker.getResource()==null || asker.getReturnStatus()!=AskURI.OK_OPTION) return;
 					
-					newSubject=InstanceCreator.createSubject(
-							ChooseObjectComponentEditor.this,
-							ObjectChooserCellEditor.this,
-							ChooseObjectComponentEditor.this.range
-							);
-					if(newSubject==null) return;
+					newSubject=asker.getResource();
 					LOG.info("creating "+newSubject+" a new "+ChooseObjectComponentEditor.this.range);
 					getRDFDataStore().add(newSubject, RDF.type, ChooseObjectComponentEditor.this.range);
 					if(System.getProperty("user.name")!=null)

@@ -11,7 +11,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.math.BigDecimal;
-import java.net.URI;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -30,7 +30,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.table.TableColumn;
 
@@ -39,6 +38,7 @@ import org.apache.log4j.Logger;
 import com.github.lindenb.rdfeditor.rdf.JenaUtils;
 import com.github.lindenb.rdfeditor.rdf.PropertyAndObject;
 import com.github.lindenb.rdfeditor.rdf.SchemaAndModel;
+import com.github.lindenb.rdfeditor.swing.dialog.AskURI;
 import com.github.lindenb.rdfeditor.swing.table.editor.ObjectChooserCellEditor;
 import com.github.lindenb.rdfeditor.swing.table.editor.PropertyChooserCellEditor;
 import com.github.lindenb.rdfeditor.swing.table.model.InDomainTableModel;
@@ -133,6 +133,10 @@ public class InstanceCreator
 			return true;
 			}
 		}
+	
+
+	
+	
 	private PropModel tableModel;
 	
 	public InstanceCreator(
@@ -450,7 +454,22 @@ public class InstanceCreator
 							}
 						for(PropertyAndObject pao:poalWithThisProperty)
 							{
-							//TODO
+							if(pao.getObject().isLiteral())
+								{
+								if(!regex.matcher(pao.getObject().asLiteral().getValue().toString()).matches())
+									{
+									LOG.error(""+pao.getObject()+" doesn't match "+regex.pattern());
+									continue;
+									}
+								}
+							else if(pao.getObject().isLiteral() && pao.getObject().asResource().isURIResource())
+								{
+								if(!regex.matcher(pao.getObject().asResource().getURI()).matches())
+									{
+									LOG.error(""+pao.getObject()+" doesn't match "+regex.pattern());
+									continue;
+									}
+								}
 							}
 						
 						
@@ -459,19 +478,52 @@ public class InstanceCreator
 							JenaUtils.convertToBigInteger(stmt.getObject())!=null
 							)
 						{
-						//TODO
+						BigInteger Len0=JenaUtils.convertToBigInteger(stmt.getObject());
+						for(PropertyAndObject pao:poalWithThisProperty)
+							{
+							if(!pao.getObject().isLiteral()) continue;
+							int len1=pao.getObject().asLiteral().getValue().toString().length();
+							BigInteger Len1=new BigInteger(String.valueOf(len1));
+							if(Len1.compareTo(Len0)!=0)
+								{
+								errors.add(p.toString()+" illegal length for "+pao+"  length: "+Len0);
+								continue;
+								}
+							}
 						}
 					else if(stmt.getPredicate().getURI().equals(XSD.getURI()+"minLength") && 
 							JenaUtils.convertToBigInteger(stmt.getObject())!=null
 							)
 						{
-						//TODO
+						BigInteger Len0=JenaUtils.convertToBigInteger(stmt.getObject());
+						for(PropertyAndObject pao:poalWithThisProperty)
+							{
+							if(!pao.getObject().isLiteral()) continue;
+							int len1=pao.getObject().asLiteral().getValue().toString().length();
+							BigInteger Len1=new BigInteger(String.valueOf(len1));
+							if(Len1.compareTo(Len0)<0)
+								{
+								errors.add(p.toString()+" illegal length for "+pao+" min-length: "+Len0);
+								continue;
+								}
+							}
 						}
 					else if(stmt.getPredicate().getURI().equals(XSD.getURI()+"maxLength") && 
 							JenaUtils.convertToBigInteger(stmt.getObject())!=null
 							)
 						{
-						//TODO
+						BigInteger Len0=JenaUtils.convertToBigInteger(stmt.getObject());
+						for(PropertyAndObject pao:poalWithThisProperty)
+							{
+							if(!pao.getObject().isLiteral()) continue;
+							int len1=pao.getObject().asLiteral().getValue().toString().length();
+							BigInteger Len1=new BigInteger(String.valueOf(len1));
+							if(Len1.compareTo(Len0)>0)
+								{
+								errors.add(p.toString()+" illegal length for "+pao+" max-length: "+Len0);
+								continue;
+								}
+							}
 						}
 					}
 				} 
@@ -493,9 +545,19 @@ public class InstanceCreator
 		JPanel pane=new JPanel(new BorderLayout(5,5));
 		pane.add(scroll,BorderLayout.CENTER);
 		String choices[]={"Fix the errors","I'll fix this later."};
-		Object sel=JOptionPane.showInputDialog(this, pane,"Errors/Warnings",JOptionPane.WARNING_MESSAGE,null,choices,choices[0]);
-		LOG.info("user selected "+sel);
-		if(sel!=choices[1]) return false;
+		int selidx=JOptionPane.showOptionDialog(
+				this,
+				pane,
+				"Errors/Warnings",
+				 JOptionPane.YES_NO_CANCEL_OPTION,
+				JOptionPane.WARNING_MESSAGE,
+				null,
+				choices,
+				choices[0]
+				);
+			
+		LOG.info("user selected "+selidx);
+		if(selidx!=1) return false;
 		return true;
 		}
 	
@@ -516,60 +578,6 @@ public class InstanceCreator
 		this.schemaAndModel.fireModelChanged();
 		}
 	
-	public static Resource createSubject(
-			Component owner,
-			SchemaAndModel schemaAndModel,
-			Resource ontClass
-			)
-		{
-
-		String defaultUri;
-		int i=0;
-		do
-			{
-			String localName=ontClass.getLocalName();
-			if(localName==null) localName="class";
-			defaultUri=String.format("urn:%s:%05d",localName,++i);
-			} while(schemaAndModel.getRDFDataStore().containsResource(ResourceFactory.createResource(defaultUri)));
-		JTextField tf=new JTextField(defaultUri,50);
-		for(;;)
-			{
-			if(JOptionPane.showConfirmDialog(
-					owner,
-					tf,
-					"Enter a valid URI",
-					JOptionPane.OK_CANCEL_OPTION,
-					JOptionPane.QUESTION_MESSAGE,
-					null
-					)!=JOptionPane.OK_OPTION) return null;
-			if(tf.getText().trim().isEmpty()) return null;
-			defaultUri=tf.getText();
-			URI uri=null;
-			try {
-				uri=new URI(tf.getText().trim());
-				if(!uri.isAbsolute())
-					{
-					JOptionPane.showMessageDialog(owner, "uri :" +uri+" is not absolute");
-					continue;
-					}
-				if(!uri.isOpaque())
-					{
-					JOptionPane.showMessageDialog(owner, "uri :" +uri+" is not opaque");
-					continue;
-					}
-				if(schemaAndModel.getRDFDataStore().containsResource(ResourceFactory.createResource(tf.getText())))
-					{
-					JOptionPane.showMessageDialog(owner, "model already contains that URI:"+tf.getText());
-					continue;
-					}
-				return ResourceFactory.createResource(tf.getText());
-				}
-			catch (Exception e)
-				{
-				JOptionPane.showMessageDialog(owner, "Bad URI:" +uri);
-				}
-			}
-		}
 	
 	public static InstanceCreator create(
 			Component owner,
@@ -577,13 +585,17 @@ public class InstanceCreator
 			Resource ontClass
 			)
 		{
-		Resource subject=createSubject(owner,schemaAndModel,ontClass);
-		if(subject==null) return null;
+		AskURI asker=new AskURI(owner, schemaAndModel.getRDFDataStore(), ontClass);
+		asker.pack();
+		asker.setLocationRelativeTo(owner);
+		asker.setVisible(true);
+		if(asker.getResource()==null || asker.getReturnStatus()!=AskURI.OK_OPTION) return null;
+		
 		InstanceCreator dlg=new InstanceCreator(
 				SwingUtilities.windowForComponent(owner),
 				schemaAndModel,
 				ontClass,
-				subject
+				asker.getResource()
 				);
 		return dlg;
 		}
